@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laboratorio de Óptica Geométrica Avanzada - Banco Óptico</title>
+    <!-- Tailwind CSS y FontAwesome -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .font-mono { font-family: 'Fira Code', monospace; }
+        canvas { touch-action: none; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-slate-900 border-b border-slate-800 px-6 py-4 flex flex-wrap justify-between items-center shadow-lg">
+        <div class="flex items-center space-x-3">
+            <div class="bg-cyan-500/10 text-cyan-400 p-2.5 rounded-xl border border-cyan-500/20">
+                <i class="fa-solid fa-atom text-2xl"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-cyan-400 to-indigo-400 bg-clip-text text-transparent">ÓpticaLab V1.0</h1>
+                <p class="text-xs text-slate-400">Banco Óptico Interactivo &middot; Simulación de Trazado de Rayos</p>
+            </div>
+        </div>
+        <div class="flex items-center space-x-3 mt-2 sm:mt-0">
+            <button onclick="resetBench()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3.5 py-2 rounded-lg text-xs font-medium border border-slate-700 transition flex items-center space-x-2">
+                <i class="fa-solid fa-rotate-right"></i>
+                <span>Reiniciar Banco</span>
+            </button>
+            <button onclick="toggleChallenges()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-2 rounded-lg text-xs font-semibold transition flex items-center space-x-2 shadow-lg shadow-indigo-500/20">
+                <i class="fa-solid fa-graduation-cap"></i>
+                <span>Retos Didácticos</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="flex-1 flex flex-col lg:flex-row relative overflow-hidden">
+        
+        <!-- Sidebar: Controles y Herramientas -->
+        <aside class="w-full lg:w-80 bg-slate-900/90 backdrop-blur border-r border-slate-800 p-5 flex flex-col space-y-5 overflow-y-auto z-10">
+            <div>
+                <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Agregar Elemento Óptico</h2>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="addElement('source')" class="bg-slate-800 hover:bg-slate-700/80 border border-slate-700/60 p-3 rounded-xl text-left transition group">
+                        <i class="fa-solid fa-sun text-amber-400 mb-1 group-hover:scale-110 transition-transform"></i>
+                        <div class="text-xs font-semibold text-slate-200">Fuente de Luz</div>
+                        <div class="text-[10px] text-slate-400">Haz paralelo o puntual</div>
+                    </button>
+                    <button onclick="addElement('convex')" class="bg-slate-800 hover:bg-slate-700/80 border border-slate-700/60 p-3 rounded-xl text-left transition group">
+                        <i class="fa-solid fa-cookie text-cyan-400 mb-1 group-hover:scale-110 transition-transform" style="transform: rotate(90deg);"></i>
+                        <div class="text-xs font-semibold text-slate-200">Lente Convexa</div>
+                        <div class="text-[10px] text-slate-400">Convergente (f > 0)</div>
+                    </button>
+                    <button onclick="addElement('concave')" class="bg-slate-800 hover:bg-slate-700/80 border border-slate-700/60 p-3 rounded-xl text-left transition group">
+                        <i class="fa-solid fa-hourglass-half text-indigo-400 mb-1 group-hover:scale-110 transition-transform"></i>
+                        <div class="text-xs font-semibold text-slate-200">Lente Cóncava</div>
+                        <div class="text-[10px] text-slate-400">Divergente (f < 0)</div>
+                    </button>
+                    <button onclick="addElement('mirror')" class="bg-slate-800 hover:bg-slate-700/80 border border-slate-700/60 p-3 rounded-xl text-left transition group">
+                        <i class="fa-solid fa-mirror text-emerald-400 mb-1 group-hover:scale-110 transition-transform"></i>
+                        <div class="text-xs font-semibold text-slate-200">Espejo Plano</div>
+                        <div class="text-[10px] text-slate-400">Reflexión especular</div>
+                    </button>
+                </div>
+            </div>
+
+            <hr class="border-slate-800">
+
+            <!-- Inspector de Elemento Seleccionado -->
+            <div id="inspector" class="flex-1 flex flex-col space-y-4">
+                <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Inspector de Elemento</h2>
+                <div id="inspector-content" class="bg-slate-950/50 border border-slate-800/80 rounded-xl p-4 text-center text-slate-500 text-xs flex flex-col items-center justify-center flex-1">
+                    <i class="fa-solid fa-hand-pointer text-2xl mb-2 text-slate-600"></i>
+                    Selecciona un elemento en el banco óptico para editar sus propiedades físicas.
+                </div>
+            </div>
+
+            <!-- Ecuación de Gauss y Métricas en Vivo -->
+            <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-4">
+                <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2 flex items-center justify-between">
+                    <span>Ecuaciones de Gauss</span>
+                    <i class="fa-solid fa-square-root-variable text-cyan-400"></i>
+                </h3>
+                <div class="space-y-1.5 text-xs font-mono text-slate-300">
+                    <div class="flex justify-between"><span class="text-slate-500">Distancia Focal (f):</span> <span id="metric-f" class="text-cyan-400">-- cm</span></div>
+                    <div class="flex justify-between"><span class="text-slate-500">Dist. Objeto (d_o):</span> <span id="metric-do">-- cm</span></div>
+                    <div class="flex justify-between"><span class="text-slate-500">Dist. Imagen (d_i):</span> <span id="metric-di" class="text-indigo-400">-- cm</span></div>
+                    <div class="flex justify-between"><span class="text-slate-500">Aumento (M):</span> <span id="metric-m">--</span></div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Canvas Area -->
+        <main class="flex-1 relative bg-slate-950 flex flex-col overflow-hidden">
+            <div class="absolute top-4 left-4 z-10 flex space-x-2 bg-slate-900/80 backdrop-blur border border-slate-800 px-3 py-1.5 rounded-lg text-xs text-slate-400 shadow-md">
+                <span><i class="fa-solid fa-arrows-left-right text-cyan-400 mr-1"></i> Arrastra los elementos sobre el banco óptico</span>
+            </div>
+            <canvas id="opticsCanvas" class="w-full flex-1 cursor-crosshair"></canvas>
+        </main>
+    </div>
+
+    <!-- Modal Retos Didácticos -->
+    <div id="challenges-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-2xl p-6 shadow-2xl relative">
+            <button onclick="toggleChallenges()" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            <div class="flex items-center space-x-3 mb-4">
+                <div class="bg-indigo-500/10 text-indigo-400 p-2.5 rounded-xl border border-indigo-500/20">
+                    <i class="fa-solid fa-graduation-cap text-xl"></i>
+                </div>
+                <div>
+                    <h2 class="text-lg font-bold text-white">Retos de Óptica Geométrica</h2>
+                    <p class="text-xs text-slate-400">Resuelve los desafíos prácticos de laboratorio</p>
+                </div>
+            </div>
+            <div class="space-y-3 mb-6">
+                <div onclick="loadChallenge(1)" class="bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 p-4 rounded-xl cursor-pointer transition">
+                    <div class="text-sm font-semibold text-cyan-400 mb-1">Reto 1: Formación de Imagen Real</div>
+                    <p class="text-xs text-slate-300">Coloca una lente convexa de f = 10cm y encuentra la posición donde se forma una imagen real invertida nítida.</p>
+                </div>
+                <div onclick="loadChallenge(2)" class="bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 p-4 rounded-xl cursor-pointer transition">
+                    <div class="text-sm font-semibold text-indigo-400 mb-1">Reto 2: Lente Divergente y Virtual</div>
+                    <p class="text-xs text-slate-300">Analiza cómo divergen los rayos al atravesar una lente cóncava y por qué la imagen producida es siempre virtual.</p>
+                </div>
+            </div>
+            <button onclick="toggleChallenges()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 py-2.5 rounded-xl text-xs font-semibold transition">Cerrar</button>
+        </div>
+    </div>
+
+    <!-- Script de Simulación Óptica -->
+    <script>
+        const canvas = document.getElementById('opticsCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let elements = [];
+        let selectedElement = null;
+        let isDragging = false;
+        let dragOffsetX = 0;
+
+        // Inicializar elementos por defecto
+        function resetBench() {
+            elements = [
+                { id: 1, type: 'source', x: 100, y: 0, label: 'Fuente Láser' },
+                { id: 2, type: 'convex', x: 400, y: 0, f: 100, label: 'Lente Convexa' },
+                { id: 3, type: 'mirror', x: 700, y: 0, label: 'Espejo Plano' }
+            ];
+            selectedElement = null;
+            updateInspector();
+        }
+
+        function resizeCanvas() {
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+        resetBench();
+
+        // Sistema de coordenadas ópticas (Eje X centrado verticalmente)
+        function getOriginY() {
+            return canvas.height / 2;
+        }
+
+        // Dibujar escena completa
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const originY = getOriginY();
+
+            // Dibujar Eje Óptico Principal
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([6, 6]);
+            ctx.beginPath();
+            ctx.moveTo(0, originY);
+            ctx.lineTo(canvas.width, originY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Trazado de Rayos Ópticos
+            traceRays(originY);
+
+            // Dibujar Elementos Ópticos
+            elements.forEach(el => {
+                drawElement(el, originY);
+            });
+
+            requestAnimationFrame(draw);
+        }
+
+        function drawElement(el, originY) {
+            const screenX = el.x;
+            const screenY = originY;
+            const isSelected = selectedElement === el;
+
+            ctx.save();
+            ctx.translate(screenX, screenY);
+
+            if (isSelected) {
+                ctx.strokeStyle = '#38bdf8';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(-25, -60, 50, 120);
+            }
+
+            if (el.type === 'source') {
+                // Dibujar fuente de luz
+                ctx.fillStyle = '#f59e0b';
+                ctx.beginPath();
+                ctx.arc(0, 0, 18, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#1e293b';
+                ctx.font = 'bold 10px Inter';
+                ctx.textAlign = 'center';
+                ctx.fillText('L', 0, 4);
+
+                ctx.strokeStyle = '#f59e0b';
+                ctx.lineWidth = 2;
+                for(let i = -1; i <= 1; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(20, i * 15);
+                    ctx.lineTo(35, i * 15);
+                    ctx.stroke();
+                }
+            } else if (el.type === 'convex') {
+                // Lente Convexa
+                ctx.strokeStyle = '#38bdf8';
+                ctx.fillStyle = 'rgba(56, 189, 248, 0.15)';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.ellipse(0, 0, 8, 50, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+            } else if (el.type === 'concave') {
+                // Lente Cóncava
+                ctx.strokeStyle = '#818cf8';
+                ctx.fillStyle = 'rgba(129, 140, 248, 0.15)';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(-5, -50);
+                ctx.quadraticCurveTo(8, 0, -5, 50);
+                ctx.lineTo(5, 50);
+                ctx.quadraticCurveTo(-8, 0, 5, -50);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+            } else if (el.type === 'mirror') {
+                // Espejo Plano
+                ctx.strokeStyle = '#34d399';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.moveTo(0, -50);
+                ctx.lineTo(0, 50);
+                ctx.stroke();
+            }
+
+            // Etiqueta del elemento
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '11px Inter';
+            ctx.textAlign = 'center';
+            ctx.fillText(el.label, 0, 70);
+
+            ctx.restore();
+        }
+
+        // Trazado de rayos físicos simplificado
+        function traceRays(originY) {
+            const source = elements.find(e => e.type === 'source');
+            if (!source) return;
+
+            const sortedElements = [...elements].filter(e => e.type !== 'source').sort((a, b) => a.x - b.x);
+            
+            // Rayos emitidos desde la fuente
+            const rayOffsets = [-30, -15, 0, 15, 30];
+
+            rayOffsets.forEach(offsetY => {
+                let currentX = source.x + 20;
+                let currentY = originY + offsetY;
+                let angle = 0; // Ángulo respecto al eje horizontal
+
+                ctx.strokeStyle = 'rgba(245, 158, 11, 0.7)';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(source.x + 20, originY + offsetY);
+
+                let active = true;
+                let currentIdx = 0;
+
+                while(active && currentIdx < 50) {
+                    // Encontrar siguiente elemento óptico en el camino del rayo
+                    const nextEl = sortedElements.find(e => e.x > currentX);
+                    
+                    if (!nextEl) {
+                        // Extender rayo hasta el borde de la pantalla
+                        currentX = canvas.width;
+                        currentY += angle * (canvas.width - currentX);
+                        ctx.lineTo(canvas.width, currentY);
+                        active = false;
+                    } else {
+                        // El rayo llega al elemento nextEl
+                        const deltaX = nextEl.x - currentX;
+                        currentY += angle * deltaX;
+                        currentX = nextEl.x;
+                        ctx.lineTo(currentX, currentY);
+
+                        // Interacción óptica según el elemento
+                        const heightFromAxis = currentY - originY;
+                        if (nextEl.type === 'convex') {
+                            // Ley de refracción de lentes delgadas: angulo_salida = - height / f
+                            const f = nextEl.f || 100;
+                            angle = -heightFromAxis / f;
+                            ctx.strokeStyle = 'rgba(56, 189, 248, 0.7)';
+                        } else if (nextEl.type === 'concave') {
+                            const f = nextEl.f || 100;
+                            angle = heightFromAxis / f;
+                            ctx.strokeStyle = 'rgba(129, 140, 248, 0.7)';
+                        } else if (nextEl.type === 'mirror') {
+                            angle = -angle; // Reflexión especular
+                            ctx.strokeStyle = 'rgba(52, 211, 153, 0.7)';
+                        }
+                    }
+                    currentIdx++;
+                }
+                ctx.stroke();
+            });
+
+            // Actualizar métricas de Gauss si hay lente convexa
+            const lens = sortedElements.find(e => e.type === 'convex');
+            if (lens && source) {
+                const d_o = (lens.x - source.x) / 10; // en cm simulados
+                const f = (lens.f || 100) / 10;
+                let d_i = '--';
+                let m = '--';
+
+                if (d_o > f) {
+                    d_i = ((d_o * f) / (d_o - f)).toFixed(1);
+                    m = (-d_i / d_o).toFixed(2);
+                } else if (d_o < f) {
+                    d_i = 'Virtual (' + ((d_o * f) / (d_o - f)).toFixed(1) + ')';
+                    m = 'Ampliada';
+                }
+
+                document.getElementById('metric-f').innerText = f + ' cm';
+                document.getElementById('metric-do').innerText = d_o.toFixed(1) + ' cm';
+                document.getElementById('metric-di').innerText = typeof d_i === 'number' ? d_i + ' cm' : d_i;
+                document.getElementById('metric-m').innerText = m;
+            }
+        }
+
+        // Interacción de Arrastre (Mouse y Touch)
+        canvas.addEventListener('pointerdown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            const originY = getOriginY();
+
+            selectedElement = elements.find(el => {
+                return Math.abs(el.x - mouseX) < 30 && Math.abs(originY - mouseY) < 60;
+            });
+
+            if (selectedElement) {
+                isDragging = true;
+                dragOffsetX = mouseX - selectedElement.x;
+            }
+            updateInspector();
+        });
+
+        canvas.addEventListener('pointermove', (e) => {
+            if (!isDragging || !selectedElement) return;
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            selectedElement.x = Math.max(50, Math.min(canvas.width - 50, mouseX - dragOffsetX));
+        });
+
+        window.addEventListener('pointerup', () => { isDragging = false; });
+
+        // Actualizar Inspector HTML
+        function updateInspector() {
+            const container = document.getElementById('inspector-content');
+            if (!selectedElement) {
+                container.innerHTML = `
+                    <i class="fa-solid fa-hand-pointer text-2xl mb-2 text-slate-600"></i>
+                    Selecciona un elemento en el banco óptico para editar sus propiedades físicas.
+                `;
+                return;
+            }
+
+            let html = `
+                <div class="space-y-3 w-full text-left">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-bold text-cyan-400">${selectedElement.label}</span>
+                        <button onclick="deleteSelected()" class="text-rose-400 hover:text-rose-300 text-xs"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-slate-400 block mb-1">Posición X (cm)</label>
+                        <input type="range" min="50" max="${canvas.width - 50}" value="${selectedElement.x}" oninput="selectedElement.x = Number(this.value)" class="w-full accent-cyan-400">
+                    </div>
+            `;
+
+            if (selectedElement.type === 'convex' || selectedElement.type === 'concave') {
+                html += `
+                    <div>
+                        <label class="text-[10px] text-slate-400 block mb-1">Distancia Focal (f): <span id="f-val">${selectedElement.f || 100}</span>mm</label>
+                        <input type="range" min="40" max="250" step="10" value="${selectedElement.f || 100}" oninput="selectedElement.f = Number(this.value); document.getElementById('f-val').innerText = this.value;" class="w-full accent-indigo-400">
+                    </div>
+                `;
+            }
+
+            html += `</div>`;
+            container.innerHTML = html;
+        }
+
+        function addElement(type) {
+            let label = 'Elemento';
+            if (type === 'source') label = 'Fuente de Luz';
+            if (type === 'convex') label = 'Lente Convexa';
+            if (type === 'concave') label = 'Lente Cóncava';
+            if (type === 'mirror') label = 'Espejo Plano';
+
+            const newEl = {
+                id: Date.now(),
+                type: type,
+                x: canvas.width / 2 + (Math.random() * 100 - 50),
+                f: 100,
+                label: label
+            };
+            elements.push(newEl);
+            selectedElement = newEl;
+            updateInspector();
+        }
+
+        function deleteSelected() {
+            if (!selectedElement) return;
+            elements = elements.filter(e => e.id !== selectedElement.id);
+            selectedElement = null;
+            updateInspector();
+        }
+
+        function toggleChallenges() {
+            const modal = document.getElementById('challenges-modal');
+            modal.classList.toggle('hidden');
+        }
+
+        function loadChallenge(id) {
+            toggleChallenges();
+            if (id === 1) {
+                elements = [
+                    { id: 1, type: 'source', x: 150, y: 0, label: 'Objeto/Fuente' },
+                    { id: 2, type: 'convex', x: 450, y: 0, f: 100, label: 'Lente Convexa (f=10cm)' }
+                ];
+            } else if (id === 2) {
+                elements = [
+                    { id: 1, type: 'source', x: 200, y: 0, label: 'Fuente' },
+                    { id: 2, type: 'concave', x: 500, y: 0, f: 120, label: 'Lente Cóncava' }
+                ];
+            }
+            selectedElement = null;
+            updateInspector();
+        }
+
+        // Iniciar loop
+        draw();
+    </script>
+</body>
+</html>
